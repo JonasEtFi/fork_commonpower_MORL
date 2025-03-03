@@ -5,7 +5,7 @@ from commonpower.core import System
 from commonpower.data_forecasting.base import DataProvider
 from commonpower.data_forecasting.data_sources import *
 from commonpower.data_forecasting.forecasters import *
-from utils import Stage, Approach, Penalty
+from utils import Stage, Approach, Penalty, CEnum
 from commonpower.models.buses import *
 from commonpower.models.components import *
 from commonpower.models.powerflow import *
@@ -16,9 +16,7 @@ from commonpower.control.runners import DeploymentRunner
 from commonpower.control.safety_layer.penalties import *
 from commonpower.control.safety_layer.safety_layers import *
 from commonpower.core import ModelHistory
-from commonpower.data_forecasting.forecasters import PersistenceForecaster
 from commonpower.data_forecasting.base import Forecaster
-
 
 
 class BaseScenario(metaclass=ABCMeta):
@@ -44,16 +42,16 @@ class BaseScenario(metaclass=ABCMeta):
 
 
 def create_scenario(
-        stage: Stage, 
-        approach: Approach, 
-        penalty: Penalty, 
-        scenario_constructor: BaseScenario,
-        forecast_length: int,
-        forecaster: Forecaster
-        ):
+    stage: Stage,
+    approach: Approach,
+    penalty: Penalty,
+    scenario_constructor: BaseScenario,
+    forecast_length: int,
+    forecaster: Forecaster,
+):
     forecast_horizon = timedelta(hours=forecast_length)
     current_path = Path().absolute()
-    data_path = current_path / 'data' 
+    data_path = current_path / 'data'
     date_format = "%Y-%m-%d %H:%M:00"
 
     # penalty configs
@@ -95,18 +93,16 @@ def create_scenario(
     sys = train_scenario.get_system()
 
     controller = RLControllerSB3(
-        name="agent1", 
+        name="agent1",
         safety_layer=safeguard,
         obs_handler=ObservationHandler(num_forecasts=forecast_length),
-        )
+    )
     controller.add_entity(sys.nodes[0])
 
     # Create deployment runner
     oc_history = ModelHistory([sys])
     eval_seed = 5
-    oc_deployer = DeploymentRunner(
-        sys=sys, horizon=forecast_horizon, history=oc_history, seed=eval_seed
-    )
+    oc_deployer = DeploymentRunner(sys=sys, horizon=forecast_horizon, history=oc_history, seed=eval_seed)
 
     return sys, oc_deployer
 
@@ -168,7 +164,7 @@ class BuildingManagementSystemScenario(BaseScenario):
                 'p': (-1.5, 1.5),  # active power limits
                 'q': (0, 0),  # reactive power limits
                 'soc': (0.1 * capacity, 0.9 * capacity),  # soc limits
-                "soc_init": ess_initializer
+                "soc_init": ess_initializer,
             },
         )
 
@@ -357,3 +353,9 @@ class BuildingManagementSystemWithEVScenario(BuildingManagementSystemScenario):
             delimiter=";",
             resample=self.forecast_frequency,
         )
+
+
+class Scenario(CEnum):
+    ConstantPricesScenario = BuildingManagementSystemScenario
+    ToUPricesScenario = BuildingManagementSystemToUPricesScenario
+    AddedEVScenario = BuildingManagementSystemWithEVScenario

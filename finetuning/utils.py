@@ -1,5 +1,6 @@
 from enum import Enum, auto
 
+
 class CEnum(Enum):
     def __str__(self):
         return self.name

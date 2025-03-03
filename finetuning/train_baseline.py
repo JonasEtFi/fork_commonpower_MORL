@@ -1,14 +1,12 @@
 import os
-from pathlib import Path
 
 from stable_baselines3 import PPO
-    
+
 from commonpower.control.configs.algorithms import SB3MetaConfig, SB3PPOConfig, SB3AlgorithmBaseConfig
 from commonpower.control.logging_utils.loggers import *
 from commonpower.control.runners import SingleAgentTrainer
 from commonpower.control.wrappers import *
 from scenarios import *
-from utils import *
 
 
 def run_experiment(
@@ -20,7 +18,7 @@ def run_experiment(
     seed: int = 1,
     n_eps: int = 900,
     fixed_start: str = None,
-    limited_date_range: List[datetime] = None
+    limited_date_range: List[datetime] = None,
 ):
     train_config = SB3MetaConfig(
         total_steps=n_eps * episode_length,
@@ -56,7 +54,7 @@ def run_experiment(
         save_path=model_dir,
         seed=seed,
         continuous_control=True,
-        limited_date_range=limited_date_range
+        limited_date_range=limited_date_range,
     )
     runner.run(fixed_start=fixed_start)
 
@@ -70,16 +68,23 @@ if __name__ == "__main__":
 
     stage = Stage.Train
     forecast_length = 6
-    forecast_cls = PersistenceForecaster(frequency=timedelta(hours=1), horizon=timedelta(hours=forecast_length), look_back=timedelta(hours=24)))
+    forecaster = PersistenceForecaster(
+        frequency=timedelta(hours=1), horizon=timedelta(hours=forecast_length), look_back=timedelta(hours=24)
+    )
 
     scenario, deployment_runner = create_scenario(
-        stage=stage, approach=approach, penalty=penalty, scenario_constructor=scenario_constructor.value
+        stage=stage,
+        approach=approach,
+        penalty=penalty,
+        scenario_constructor=scenario_constructor.value,
+        forecast_length=forecast_length,
+        forecaster=forecaster,
     )
 
     save_path = f'{scenario_constructor}/{approach}/{penalty}'
 
-    # Optional: set start date for training (we work with data from 2016) and limit the date range for training data to a specific time
-    train_start = "01.07.2016"
+    # Optional: set start date for training (we work with data from 2016)
+    # and limit the date range for training data to a specific time
     date_format = "%Y-%m-%d %H:%M:00"
     start = datetime.strptime("2016-07-01 00:00:00", date_format)
     end = datetime.strptime("2016-07-31 23:00:00", date_format)
@@ -107,6 +112,6 @@ if __name__ == "__main__":
             forecast_horizon=horizon,
             episode_length=episode_length,
             train_sys=scenario,
-            fixed_start=train_start,
-            limited_date_range=[start, end]
+            fixed_start=start,
+            limited_date_range=[start, end],
         )
