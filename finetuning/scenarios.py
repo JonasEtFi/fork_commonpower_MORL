@@ -48,21 +48,10 @@ def create_scenario(
         approach: Approach, 
         penalty: Penalty, 
         scenario_constructor: BaseScenario,
-        forecast_length: int = 6,
-        forecaster_cls: Forecaster = PersistenceForecaster,
-        forecast_frequency: timedelta = timedelta(minutes=60),
-        look_back: timedelta = timedelta(hours=24),
+        forecast_length: int,
+        forecaster: Forecaster
         ):
     forecast_horizon = timedelta(hours=forecast_length)
-    if isinstance(forecaster_cls, PersistenceForecaster):
-        if look_back is None:
-            raise ValueError("Look back time must be provided for PersistenceForecaster")
-        forecaster = PersistenceForecaster(
-            frequency=forecast_frequency, horizon=forecast_horizon, look_back=look_back
-        )
-    else:
-        forecaster = forecaster_cls(frequency=forecast_frequency, horizon=forecast_horizon)
-
     current_path = Path().absolute()
     data_path = current_path / 'data' 
     date_format = "%Y-%m-%d %H:%M:00"
