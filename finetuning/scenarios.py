@@ -92,11 +92,14 @@ def create_scenario(
 
     sys = train_scenario.get_system()
 
-    controller = RLControllerSB3(
-        name="agent1",
-        safety_layer=safeguard,
-        obs_handler=ObservationHandler(num_forecasts=forecast_length),
-    )
+    if approach is Approach.OptimalController:
+        controller = OptimalController(name="agent1")
+    else:
+        controller = RLControllerSB3(
+            name="agent1",
+            safety_layer=safeguard,
+            obs_handler=ObservationHandler(num_forecasts=forecast_length),
+        )
     controller.add_entity(sys.nodes[0])
 
     # Create deployment runner

@@ -21,7 +21,7 @@ def run_experiment(
     limited_date_range: List[datetime] = None,
 ):
     train_config = SB3MetaConfig(
-        total_steps=n_eps * episode_length,
+        total_steps=n_eps * sb3_config.n_steps,
         seed=seed,
         algorithm=PPO,
         algorithm_config=sb3_config,
@@ -53,7 +53,6 @@ def run_experiment(
         logger=logger,
         save_path=model_dir,
         seed=seed,
-        continuous_control=True,
         limited_date_range=limited_date_range,
     )
     runner.run(fixed_start=fixed_start)
@@ -72,7 +71,8 @@ if __name__ == "__main__":
         frequency=timedelta(hours=1), horizon=timedelta(hours=forecast_length), look_back=timedelta(hours=24)
     )
 
-    scenario, deployment_runner = create_scenario(
+    for seed in seeds:
+        scenario, deployment_runner = create_scenario(
         stage=stage,
         approach=approach,
         penalty=penalty,
@@ -81,29 +81,28 @@ if __name__ == "__main__":
         forecaster=forecaster,
     )
 
-    save_path = f'{scenario_constructor}/{approach}/{penalty}'
+        save_path = f'{scenario_constructor}/{approach}/{penalty}'
 
-    # Optional: set start date for training (we work with data from 2016)
-    # and limit the date range for training data to a specific time
-    date_format = "%Y-%m-%d %H:%M:00"
-    start = datetime.strptime("2016-07-01 00:00:00", date_format)
-    end = datetime.strptime("2016-07-31 23:00:00", date_format)
+        # Optional: set start date for training (we work with data from 2016)
+        # and limit the date range for training data to a specific time
+        date_format = "%Y-%m-%d %H:%M:00"
+        start = datetime.strptime("2016-07-01 00:00:00", date_format)
+        end = datetime.strptime("2016-07-31 23:00:00", date_format)
 
-    # extract relevant parameters
-    horizon = getattr(deployment_runner, "horizon")
-    episode_length = 72
+        # extract relevant parameters
+        horizon = getattr(deployment_runner, "horizon")
+        episode_length = 24 * 31 # one month
 
-    # set up configuration for the PPO algorithm
-    ppo_config = SB3PPOConfig(
-        device="cpu",
-        n_steps=4 * episode_length,
-        batch_size=4 * episode_length,
-        learning_rate=0.0008,
-        n_epochs=5,
-        policy_kwargs=dict(log_std_init=-2),
-    )  # otherwise default hyperparameters for PPO
+        # set up configuration for the PPO algorithm
+        ppo_config = SB3PPOConfig(
+            device="cpu",
+            n_steps=96,
+            batch_size=24,
+            learning_rate=0.0008,
+            n_epochs=5,
+            policy_kwargs=dict(log_std_init=-2),
+        )  # otherwise default hyperparameters for PPO
 
-    for seed in seeds:
         run_experiment(
             save_path=save_path,
             seed=seed,
