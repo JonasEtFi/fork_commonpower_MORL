@@ -21,8 +21,6 @@ def compute_average_results_over_seeds(results_dir, seeds):
             "total_cum_reward",
             "cum_reward_mean",
             "cum_reward_std",
-            "eps_length_mean",
-            "eps_length_std",
             "n_interventions_mean",
             "n_interventions_std",
         ],
@@ -62,7 +60,7 @@ def run_deployment(
     os.makedirs(results_dir, exist_ok=True)
     # result data frames
     cum_cost_df = pd.DataFrame(
-        columns=["cum_reward", "eps_length", "n_interventions"],
+        columns=["cum_reward", "n_interventions"],
         index=[i for i in range(len(eval_periods))],
     )
     
@@ -88,12 +86,17 @@ def run_deployment(
             datetime_format = "%d.%m.%Y"
             deployer.set_start_time(datetime.strptime(eval_period, datetime_format))
             deployer.run(n_steps=n_eval_steps)
-            controller_history = scenario.controllers["agent1"].deployment_history[0]["action_corrected"]
-            num_interventions = sum([controller_history[i][1] for i in range(len(controller_history))])
+            
             history.get_history_for_element(scenario.nodes[0], 'cost')
             cumulative_cost = get_adjusted_cost(history, scenario)
             print(f"Cumulative cost: {round(sum(cumulative_cost), 2)} €")
             cum_cost_df.iloc[i, 0] = round(sum(cumulative_cost), 2)
+            if approach is Approach.OptimalController:
+                num_interventions = 0
+            else:
+                controller_history = scenario.controllers["agent1"].deployment_history[0]["action_corrected"]
+                num_interventions = sum([controller_history[i][1] for i in range(len(controller_history))])
+            
             cum_cost_df.iloc[i, 1] = num_interventions
 
             cum_cost_df.to_csv(results_dir + "/seed_results.csv")
@@ -106,7 +109,7 @@ if __name__=="__main__":
     # Set the evaluation time frame - one year starting on January 1st 
     # (quite time intensive, could also change to evaluating over multiple weeks during the year but less accurate)
     eval_periods = ["02.01.2016"]  # since we only have data from 2016 and our forecaster uses a lookback horizon of 24 hours
-    n_eval_steps = 2 * 24  # one year
+    n_eval_steps = 364 * 24  # one year
     eval_seed = 5
 
 
