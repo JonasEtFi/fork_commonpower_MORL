@@ -73,13 +73,13 @@ if __name__ == "__main__":
 
     for seed in seeds:
         scenario, deployment_runner = create_scenario(
-        stage=stage,
-        approach=approach,
-        penalty=penalty,
-        scenario_constructor=scenario_constructor.value,
-        forecast_length=forecast_length,
-        forecaster=forecaster,
-    )
+            stage=stage,
+            approach=approach,
+            penalty=penalty,
+            scenario_constructor=scenario_constructor.value,
+            forecast_length=forecast_length,
+            forecaster=forecaster,
+        )
 
         save_path = f'{scenario_constructor}/{approach}/{penalty}'
 
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
         # extract relevant parameters
         horizon = getattr(deployment_runner, "horizon")
-        episode_length = 24 * 31 # one month
+        episode_length = 24 * 31  # one month
 
         # set up configuration for the PPO algorithm
         ppo_config = SB3PPOConfig(

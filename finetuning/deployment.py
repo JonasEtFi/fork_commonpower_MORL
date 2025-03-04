@@ -1,4 +1,4 @@
-import os 
+import os
 
 from commonpower.control.wrappers import *
 from utils import *
@@ -38,22 +38,22 @@ def compute_average_results_over_seeds(results_dir, seeds):
 
 
 def run_deployment(
-        scenario: System, 
-        train_seed: int,
-        horizon: timedelta, 
-        approach: Approach, 
-        ppo_config: SB3AlgorithmBaseConfig, 
-        save_path: str, 
-        eval_periods: List[str], 
-        n_eval_steps: int, 
-        eval_seed: int
-        ):
+    scenario: System,
+    train_seed: int,
+    horizon: timedelta,
+    approach: Approach,
+    ppo_config: SB3AlgorithmBaseConfig,
+    save_path: str,
+    eval_periods: List[str],
+    n_eval_steps: int,
+    eval_seed: int,
+):
     alg_config = SB3MetaConfig(
-                total_steps=1,
-                seed=train_seed,
-                algorithm=PPO,
-                algorithm_config=ppo_config,
-            )
+        total_steps=1,
+        seed=train_seed,
+        algorithm=PPO,
+        algorithm_config=ppo_config,
+    )
     model_dir = os.getcwd() + f'/models/{save_path}/{train_seed}'
     # specify path for results
     results_dir = os.getcwd() + f'/results/{save_path}/{train_seed}'
@@ -63,7 +63,7 @@ def run_deployment(
         columns=["cum_reward", "n_interventions"],
         index=[i for i in range(len(eval_periods))],
     )
-    
+
     wrappers = WrapperStack()
     if not (approach is Approach.OptimalController):
         wrappers.add(SingleAgentWrapper)
@@ -73,45 +73,47 @@ def run_deployment(
         setattr(rl_controller, "load_path", model_dir)
 
     for i, eval_period in enumerate(eval_periods):
-            history = ModelHistory([scenario])
-            deployer = DeploymentRunner(
-                sys=scenario,
-                horizon=horizon,
-                history=history,
-                seed=eval_seed,
-                alg_config=alg_config,
-                wrapper=wrappers.get_stack(),
-                continuous_control=True,
-            )
-            datetime_format = "%d.%m.%Y"
-            deployer.set_start_time(datetime.strptime(eval_period, datetime_format))
-            deployer.run(n_steps=n_eval_steps)
-            
-            history.get_history_for_element(scenario.nodes[0], 'cost')
-            cumulative_cost = get_adjusted_cost(history, scenario)
-            print(f"Cumulative cost: {round(sum(cumulative_cost), 2)} €")
-            cum_cost_df.iloc[i, 0] = round(sum(cumulative_cost), 2)
-            if approach is Approach.OptimalController:
-                num_interventions = 0
-            else:
-                controller_history = scenario.controllers["agent1"].deployment_history[0]["action_corrected"]
-                num_interventions = sum([controller_history[i][1] for i in range(len(controller_history))])
-            
-            cum_cost_df.iloc[i, 1] = num_interventions
+        history = ModelHistory([scenario])
+        deployer = DeploymentRunner(
+            sys=scenario,
+            horizon=horizon,
+            history=history,
+            seed=eval_seed,
+            alg_config=alg_config,
+            wrapper=wrappers.get_stack(),
+            continuous_control=True,
+        )
+        datetime_format = "%d.%m.%Y"
+        deployer.set_start_time(datetime.strptime(eval_period, datetime_format))
+        deployer.run(n_steps=n_eval_steps)
 
-            cum_cost_df.to_csv(results_dir + "/seed_results.csv")
+        history.get_history_for_element(scenario.nodes[0], 'cost')
+        cumulative_cost = get_adjusted_cost(history, scenario)
+        print(f"Cumulative cost: {round(sum(cumulative_cost), 2)} €")
+        cum_cost_df.iloc[i, 0] = round(sum(cumulative_cost), 2)
+        if approach is Approach.OptimalController:
+            num_interventions = 0
+        else:
+            controller_history = scenario.controllers["agent1"].deployment_history[0]["action_corrected"]
+            num_interventions = sum([controller_history[i][1] for i in range(len(controller_history))])
 
-if __name__=="__main__":
-    approach = Approach.OptimalController # Approach.OptimalController
+        cum_cost_df.iloc[i, 1] = num_interventions
+
+        cum_cost_df.to_csv(results_dir + "/seed_results.csv")
+
+
+if __name__ == "__main__":
+    approach = Approach.OptimalController  # Approach.OptimalController
     penalty = Penalty.NoPenalty  # Penalty.NoPenalty
     scenario_constructor = Scenario.ConstantPricesScenario
     save_path = f'{scenario_constructor}/{approach}/{penalty}'
-    # Set the evaluation time frame - one year starting on January 1st 
+    # Set the evaluation time frame - one year starting on January 1st
     # (quite time intensive, could also change to evaluating over multiple weeks during the year but less accurate)
-    eval_periods = ["02.01.2016"]  # since we only have data from 2016 and our forecaster uses a lookback horizon of 24 hours
+    eval_periods = [
+        "02.01.2016"
+    ]  # since we only have data from 2016 and our forecaster uses a lookback horizon of 24 hours
     n_eval_steps = 364 * 24  # one year
     eval_seed = 5
-
 
     stage = Stage.Deploy
     forecast_length = 6
@@ -126,13 +128,13 @@ if __name__=="__main__":
 
     for seed in seeds:
         scenario, deployment_runner = create_scenario(
-        stage=stage,
-        approach=approach,
-        penalty=penalty,
-        scenario_constructor=scenario_constructor.value,
-        forecast_length=forecast_length,
-        forecaster=forecaster,
-    )
+            stage=stage,
+            approach=approach,
+            penalty=penalty,
+            scenario_constructor=scenario_constructor.value,
+            forecast_length=forecast_length,
+            forecaster=forecaster,
+        )
 
         # extract relevant parameters
         horizon = getattr(deployment_runner, "horizon")
@@ -155,8 +157,8 @@ if __name__=="__main__":
             save_path=save_path,
             eval_periods=eval_periods,
             n_eval_steps=n_eval_steps,
-            eval_seed=eval_seed
-            )
+            eval_seed=eval_seed,
+        )
 
     # average results over seeds:
     results_dir = os.getcwd() + f'/results/{save_path}'
