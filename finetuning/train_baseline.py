@@ -60,7 +60,7 @@ def run_experiment(
 
 if __name__ == "__main__":
     seeds = [1, 2, 3, 4, 5]
-    n_eps = 900
+    n_eps = 10000
     approach = Approach.WithProjectionSafeguard
     penalty = Penalty.DDPenalty
     scenario_constructor = Scenario.ConstantPricesScenario
@@ -96,11 +96,11 @@ if __name__ == "__main__":
         # set up configuration for the PPO algorithm
         ppo_config = SB3PPOConfig(
             device="cpu",
-            n_steps=96,
-            batch_size=24,
+            n_steps=episode_length,
+            batch_size=episode_length,
             learning_rate=0.0008,
             n_epochs=5,
-            policy_kwargs=dict(log_std_init=-2),
+            policy_kwargs=dict(log_std_init=0),
         )  # otherwise default hyperparameters for PPO
 
         run_experiment(
