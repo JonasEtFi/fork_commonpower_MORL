@@ -1,22 +1,20 @@
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
-from commonpower.core import System
-from commonpower.data_forecasting.base import DataProvider
-from commonpower.data_forecasting.data_sources import *
-from commonpower.data_forecasting.forecasters import *
-from utils import Stage, Approach, Penalty, CEnum
-from commonpower.models.buses import *
-from commonpower.models.components import *
-from commonpower.models.powerflow import *
-from commonpower.modeling.param_initialization import *
+from utils import Approach, CEnum, Penalty, Stage
 
 from commonpower.control.controllers import *
 from commonpower.control.runners import DeploymentRunner
 from commonpower.control.safety_layer.penalties import *
 from commonpower.control.safety_layer.safety_layers import *
-from commonpower.core import ModelHistory
-from commonpower.data_forecasting.base import Forecaster
+from commonpower.core import ModelHistory, System
+from commonpower.data_forecasting.base import DataProvider, Forecaster
+from commonpower.data_forecasting.data_sources import *
+from commonpower.data_forecasting.forecasters import *
+from commonpower.modeling.param_initialization import *
+from commonpower.models.buses import *
+from commonpower.models.components import *
+from commonpower.models.powerflow import *
 
 
 class BaseScenario(metaclass=ABCMeta):

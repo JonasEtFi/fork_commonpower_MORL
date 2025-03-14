@@ -1,11 +1,12 @@
 import os
 
-from commonpower.control.wrappers import *
-from utils import *
 from scenarios import *
-from commonpower.control.configs.algorithms import *
-from commonpower.utils.helpers import get_adjusted_cost
 from stable_baselines3 import PPO
+from utils import *
+
+from commonpower.control.configs.algorithms import *
+from commonpower.control.wrappers import *
+from commonpower.utils.helpers import get_adjusted_cost
 
 
 def compute_average_results_over_seeds(results_dir, seeds):

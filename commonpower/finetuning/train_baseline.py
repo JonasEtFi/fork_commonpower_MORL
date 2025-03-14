@@ -1,12 +1,12 @@
 import os
 
+from scenarios import *
 from stable_baselines3 import PPO
 
-from commonpower.control.configs.algorithms import SB3MetaConfig, SB3PPOConfig, SB3AlgorithmBaseConfig
+from commonpower.control.configs.algorithms import SB3AlgorithmBaseConfig, SB3MetaConfig, SB3PPOConfig
 from commonpower.control.logging_utils.loggers import *
 from commonpower.control.runners import SingleAgentTrainer
 from commonpower.control.wrappers import *
-from scenarios import *
 
 
 def run_experiment(
