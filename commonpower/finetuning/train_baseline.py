@@ -60,7 +60,7 @@ def run_experiment(
 
 if __name__ == "__main__":
     seeds = [1, 2, 3, 4, 5]
-    n_eps = 10000
+    n_eps = 1000
     approach = Approach.WithProjectionSafeguard
     penalty = Penalty.DDPenalty
     scenario_constructor = Scenario.ConstantPricesScenario
