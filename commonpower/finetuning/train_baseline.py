@@ -33,8 +33,8 @@ def run_experiment(
     # Uncomment to enable W&B logging --> have to change entity_name!
     logger = WandBLogger(
         log_dir=tb_log_dir,
-        entity_name="srl4ps",
-        project_name="commonpower_experiments",
+        entity_name="sgmorl",
+        project_name="sgmorl",
         run_name=f"{save_path}_{seed}",
     )
 
