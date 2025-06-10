@@ -23,6 +23,7 @@ class ControlEnv(gym.Env):
         fixed_start: datetime = None,
         normalize_action_space: bool = True,
         history: ModelHistory = None,
+        scalarisation_fn: Optional[callable] = lambda reward_vector: reward_vector[0],
     ):
         """
         Class that provides the interface between our power system and any reinforcement learning algorithm. Based on
@@ -52,6 +53,7 @@ class ControlEnv(gym.Env):
         self.episode_history = {agent_id: deque(maxlen=100) for agent_id in self.controllers.keys()}
         self.normalize_actions = normalize_action_space
         self.system_history = history
+        self.scalarisation_fn = scalarisation_fn
 
         # training or deployment?
         self.train = True
@@ -130,11 +132,15 @@ class ControlEnv(gym.Env):
             for agent, agent_obs in obs.items()
             if agent in self.controllers.keys()
         }
-        # rewards are negative costs
-        rewards = {agent: -agent_cost for agent, agent_cost in costs.items() if agent in self.controllers.keys()}
-        # update history with reward-penalty
+        # rewards are vectors of negative cost and safety penalty
+        rewards = {
+            agent: np.array([-agent_cost, agent.history["safety_penalty"][-1][1]])
+            for agent, agent_cost in costs.items()
+            if agent in self.controllers.keys()
+        }
+        # update history with reward penalty
         for agent_id, agent in self.controllers.items():
-            agent.update_history({"reward_without_penalty": rewards[agent_id] + agent.history["safety_penalty"][-1][1]})
+            agent.update_history({"reward_without_penalty": rewards[agent_id][0]})
         # get train history at end of episode:
         if terminated or truncated:
             self.train_history = {agent_id: copy(agent.history) for agent_id, agent in self.controllers.items()}
@@ -148,6 +154,10 @@ class ControlEnv(gym.Env):
                         "n_corrections": np.sum([t[1] for t in self.train_history[agent_id]["action_corrected"]]),
                     }
                 )
+
+        # optionally scalarise reward vectors
+        if self.scalarisation_fn is not None:
+            rewards = {agent: self.scalarisation_fn(reward) for agent, reward in rewards.items()}
 
         return obs, rewards, terminated, truncated, info
 
