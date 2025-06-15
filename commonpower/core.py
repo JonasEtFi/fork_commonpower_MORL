@@ -1,6 +1,7 @@
 """
 Core power system entities.
 """
+
 from __future__ import annotations
 
 import pickle
@@ -9,7 +10,7 @@ import re
 from collections import OrderedDict
 from copy import copy
 from datetime import datetime, timedelta
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -372,6 +373,7 @@ class System(ControllableModelEntity):
         fixed_start: datetime = None,
         normalize_actions: bool = True,
         history: ModelHistory = None,
+        scalarisation_fn: Optional[Callable] = None,
     ):
         """
         Creates an environment which encapsulates the power system in a way that RL algorithms can interact with it.
@@ -399,6 +401,7 @@ class System(ControllableModelEntity):
                 fixed_start=fixed_start,
                 normalize_action_space=normalize_actions,
                 history=history,
+                scalarisation_fn=scalarisation_fn,
             )
             if wrapper:
                 env = wrapper(env)

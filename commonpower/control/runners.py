@@ -1,6 +1,7 @@
 """
 Runners to manage training/deployment in systems with both RL and non-RL controllers.
 """
+
 from __future__ import annotations
 
 import os
@@ -9,7 +10,7 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from datetime import datetime, timedelta
-from typing import List, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
@@ -213,6 +214,7 @@ class BaseTrainer(BaseRunner):
         seed: int = None,
         normalize_actions: bool = True,
         limited_date_range: List[datetime] = None,
+        scalarisation_fn: Optional[Callable] = None,
     ):
         """
         Base class for any runner used for training one or multiple reinforcement learning (RL) agents.
@@ -261,6 +263,7 @@ class BaseTrainer(BaseRunner):
         self.save_path = save_path
         # episode length for learning
         self.episode_length = episode_length
+        self.scalarisation_fn = scalarisation_fn
 
     def prepare_run(self):
         """
@@ -282,6 +285,7 @@ class BaseTrainer(BaseRunner):
                 wrapper=self.wrapper,
                 fixed_start=self.fixed_start,
                 normalize_actions=self.normalize_actions,
+                scalarisation_fn=self.scalarisation_fn,
             )
 
 
@@ -304,6 +308,7 @@ class SingleAgentTrainer(BaseTrainer):
         seed: int = None,
         normalize_actions: bool = True,
         limited_date_range: List[datetime] = None,
+        scalarisation_fn: Optional[Callable] = None,
     ):
         """
         Runner for training a single RL agent (with algorithms from the StableBaselines 3 repository).
@@ -350,6 +355,7 @@ class SingleAgentTrainer(BaseTrainer):
             seed=seed,
             normalize_actions=normalize_actions,
             limited_date_range=limited_date_range,
+            scalarisation_fn=scalarisation_fn,
         )
         self.alg_config = alg_config
         self.policy = policy

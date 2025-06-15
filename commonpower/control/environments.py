@@ -1,6 +1,7 @@
 """
 Base API (based on gymnasium API) between controlled system and RL training algorithms.
 """
+
 from collections import OrderedDict, deque
 from copy import copy, deepcopy
 from datetime import datetime
@@ -134,7 +135,7 @@ class ControlEnv(gym.Env):
         }
         # rewards are vectors of negative cost and safety penalty
         rewards = {
-            agent: np.array([-agent_cost, agent.history["safety_penalty"][-1][1]])
+            agent: np.array([-agent_cost, self.controllers[agent].history["safety_penalty"][-1][1]])
             for agent, agent_cost in costs.items()
             if agent in self.controllers.keys()
         }
