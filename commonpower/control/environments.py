@@ -135,7 +135,7 @@ class ControlEnv(gym.Env):
         }
         # rewards are vectors of negative cost and safety penalty
         rewards = {
-            agent: np.array([-agent_cost, self.controllers[agent].history["safety_penalty"][-1][1]])
+            agent: np.array([-agent_cost, -self.controllers[agent].history["safety_penalty"][-1][1]])
             for agent, agent_cost in costs.items()
             if agent in self.controllers.keys()
         }
