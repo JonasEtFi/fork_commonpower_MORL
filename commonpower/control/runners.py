@@ -341,6 +341,15 @@ class SingleAgentTrainer(BaseTrainer):
             SingleAgentTrainer
 
         """
+
+        # For backward compatibility with single-objective scripts and tests (see test_rl_control)
+        # If no function is provided, default to first element of reward vector
+        def default_scalarisation_fn(reward_vector):
+            return reward_vector[0]
+
+        if scalarisation_fn is None:
+            scalarisation_fn = default_scalarisation_fn
+
         super().__init__(
             sys=sys,
             global_controller=global_controller,
