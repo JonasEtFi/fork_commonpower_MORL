@@ -10,11 +10,12 @@ import time
 import warnings
 from collections import OrderedDict, deque
 from datetime import datetime, timedelta
-from typing import Callable, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import gymnasium as gym
 import numpy as np
 import torch
+import wandb
 from pyomo.opt import TerminationCondition
 from pyomo.opt.solver import OptSolver
 from stable_baselines3 import PPO, SAC
@@ -22,10 +23,9 @@ from stable_baselines3.common.base_class import BasePolicy
 from stable_baselines3.common.utils import safe_mean
 from tqdm import tqdm
 
-import wandb
 from commonpower.control.configs.algorithms import MAPPOBaseConfig, SB3MetaConfig
 from commonpower.control.controllers import OptimalController, RLBaseController
-from commonpower.control.environments import ControlEnv
+from commonpower.control.environments import ControlEnv, default_scalarisation_fn
 from commonpower.control.logging_utils.loggers import BaseLogger, TensorboardLogger
 from commonpower.control.util import t2n
 from commonpower.control.wrappers import DeploymentWrapper
@@ -214,7 +214,7 @@ class BaseTrainer(BaseRunner):
         seed: int = None,
         normalize_actions: bool = True,
         limited_date_range: List[datetime] = None,
-        scalarisation_fn: Optional[Callable] = None,
+        scalarisation_fn: Optional[callable] = default_scalarisation_fn,
     ):
         """
         Base class for any runner used for training one or multiple reinforcement learning (RL) agents.
@@ -308,7 +308,7 @@ class SingleAgentTrainer(BaseTrainer):
         seed: int = None,
         normalize_actions: bool = True,
         limited_date_range: List[datetime] = None,
-        scalarisation_fn: Optional[Callable] = None,
+        scalarisation_fn: Optional[callable] = default_scalarisation_fn,
     ):
         """
         Runner for training a single RL agent (with algorithms from the StableBaselines 3 repository).
@@ -341,14 +341,6 @@ class SingleAgentTrainer(BaseTrainer):
             SingleAgentTrainer
 
         """
-
-        # For backward compatibility with single-objective scripts and tests (see test_rl_control)
-        # If no function is provided, default to first element of reward vector
-        def default_scalarisation_fn(reward_vector):
-            return reward_vector[0]
-
-        if scalarisation_fn is None:
-            scalarisation_fn = default_scalarisation_fn
 
         super().__init__(
             sys=sys,

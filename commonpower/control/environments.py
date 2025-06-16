@@ -15,6 +15,10 @@ from commonpower.modeling.history import ModelHistory
 from commonpower.utils.cp_exceptions import ControllerError
 
 
+def default_scalarisation_fn(reward_vector: np.ndarray) -> float:
+    return reward_vector[0]  # consider only the electricity cost
+
+
 class ControlEnv(gym.Env):
     def __init__(
         self,
@@ -24,7 +28,7 @@ class ControlEnv(gym.Env):
         fixed_start: datetime = None,
         normalize_action_space: bool = True,
         history: ModelHistory = None,
-        scalarisation_fn: Optional[callable] = lambda reward_vector: reward_vector[0],
+        scalarisation_fn: Optional[callable] = default_scalarisation_fn,
     ):
         """
         Class that provides the interface between our power system and any reinforcement learning algorithm. Based on
@@ -156,7 +160,7 @@ class ControlEnv(gym.Env):
                     }
                 )
 
-        # optionally scalarise reward vectors
+        # scalarise reward vectors if a scalarisation function is provided
         if self.scalarisation_fn is not None:
             rewards = {agent: self.scalarisation_fn(reward) for agent, reward in rewards.items()}
 

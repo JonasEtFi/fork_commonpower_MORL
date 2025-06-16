@@ -18,7 +18,7 @@ from pyomo.core import ConcreteModel, Expression, Objective, Set, quicksum, valu
 from pyomo.opt import TerminationCondition
 from pyomo.opt.solver import OptSolver
 
-from commonpower.control.environments import ControlEnv
+from commonpower.control.environments import ControlEnv, default_scalarisation_fn
 from commonpower.control.observation_handling import Observer
 from commonpower.data_forecasting import DataProvider
 from commonpower.modeling.base import ControllableModelEntity, ElementTypes, ModelElement, ModelEntity
@@ -373,7 +373,7 @@ class System(ControllableModelEntity):
         fixed_start: datetime = None,
         normalize_actions: bool = True,
         history: ModelHistory = None,
-        scalarisation_fn: Optional[Callable] = None,
+        scalarisation_fn: Optional[callable] = default_scalarisation_fn,
     ):
         """
         Creates an environment which encapsulates the power system in a way that RL algorithms can interact with it.
