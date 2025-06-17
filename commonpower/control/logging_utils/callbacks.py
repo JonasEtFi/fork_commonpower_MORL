@@ -77,9 +77,10 @@ class WandBSafetyCallback(WandbCallback):
         self.logger.record("rollout/ep_rew_without_pen_mean", mean_episode_rew_without_pen)
 
         episode_length = self.training_env.envs[0].get_wrapper_attr("episode_length")
-        # episode_length and episode_length to prevent crash for None in episode_length
+        # episode_length and episode_length to prevent crash for None in episode_length.
         if episode_length and episode_length > 0:
-            # Calculate the share of steps within an episode where a correction occurred -> (number of corrections) / (total steps in episode)
+            # Calculate the share of steps within an episode where a correction occurred
+            # -> (number of corrections) / (total steps in episode)
             mean_corrections_share = safe_mean([ep_info["n_corrections"] / episode_length for ep_info in eps_history])
             self.logger.record("safety/ep_corrections_share_mean", mean_corrections_share)
 
