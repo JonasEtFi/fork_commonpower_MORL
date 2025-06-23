@@ -50,6 +50,29 @@ class SB3MetaConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class MORL_AlgorithmBaseConfig(BaseModel):
+    device: str = 'cpu'
+    batch_size: int = 12  # since as default we use small amount of data per update, we also use a smaller batch size
+    learning_rate: float = 0.0003
+
+
+class MORL_PCNConfig(MORL_AlgorithmBaseConfig):
+    n_steps: int = 24  # corresponds to 24 time steps, so 1 day if tau=1h
+    gamma: float = 1.0  # MORL-Baselines PCN default
+    hidden_dim: int = 64  # MORL-Baselines PCN default
+    scaling_factor: float = 1.0  # we do not scale by default
+
+
+class MORL_MetaConfig(BaseModel):
+    total_steps: int
+    algorithm: ABCMeta
+    seed: int
+    algorithm_config: MORL_AlgorithmBaseConfig
+    penalty_factor: float = 0.0
+    # necessary for ABCMeta type
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class MAPPOBaseConfig(BaseModel):
     algorithm_name: str
     seed: int

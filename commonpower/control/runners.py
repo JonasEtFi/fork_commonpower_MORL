@@ -16,6 +16,8 @@ import gymnasium as gym
 import numpy as np
 import torch
 import wandb
+from morl_baselines.common.morl_algorithm import MOAgent
+from morl_baselines.multi_policy.pcn.pcn import PCN
 from pyomo.opt import TerminationCondition
 from pyomo.opt.solver import OptSolver
 from stable_baselines3 import PPO, SAC
@@ -23,10 +25,10 @@ from stable_baselines3.common.base_class import BasePolicy
 from stable_baselines3.common.utils import safe_mean
 from tqdm import tqdm
 
-from commonpower.control.configs.algorithms import MAPPOBaseConfig, SB3MetaConfig
+from commonpower.control.configs.algorithms import MAPPOBaseConfig, MORL_MetaConfig, SB3MetaConfig
 from commonpower.control.controllers import OptimalController, RLBaseController
 from commonpower.control.environments import ControlEnv, default_scalarisation_fn
-from commonpower.control.logging_utils.loggers import BaseLogger, TensorboardLogger
+from commonpower.control.logging_utils.loggers import BaseLogger, TensorboardLogger, WandBLogger
 from commonpower.control.util import t2n
 from commonpower.control.wrappers import DeploymentWrapper
 from commonpower.core import System
@@ -419,6 +421,156 @@ class SingleAgentTrainer(BaseTrainer):
     def finish_run(self):
         super().finish_run()
         self.logger.finish_logging()
+
+
+class SingleAgentTrainerMORL(BaseTrainer):
+    def __init__(
+        self,
+        sys: System,
+        alg_config: MORL_MetaConfig,
+        global_controller: OptimalController = OptimalController("global"),
+        policy: MOAgent = None,
+        wrapper: gym.Wrapper = None,
+        logger: BaseLogger = None,
+        horizon: timedelta = timedelta(hours=24),
+        episode_length: int = 24,
+        dt: timedelta = timedelta(minutes=60),
+        continuous_control: bool = False,
+        history: ModelHistory = None,
+        solver: OptSolver = get_default_solver(),
+        save_path: str = "./saved_models/test_model",
+        seed: int = None,
+        normalize_actions: bool = True,
+        limited_date_range: List[datetime] = None,
+        scalarisation_fn: Optional[callable] = default_scalarisation_fn,
+    ):
+        """
+        Runner for training a single RL agent with multi-objective reinforcement learning (MORL) algorithms
+        from the MORL-Baselines repository: https://github.com/LucasAlegre/morl-baselines
+
+        Args:
+            sys (System): power system to be controlled
+            global_controller (OptimalController): instance of controller taking over control of all nodes
+                that have not yet been assigned a controller. Mostly used to balance the system using
+                a market node or a generator. Defaults to OptimalController("global").
+            alg_config (MORLMetaConfig): configuration for the RL algorithm and policy to be trained
+            policy (BasePolicy): policy instance (can be handed over to be retrained)
+            wrapper (gym.Wrapper): wrapper for the environment that handles the RL agents during training
+                (used for example for single-agent RL control).
+            logger (BaseLogger): object for handling training logs
+            horizon (timedelta): amount of time that the controller looks into the future
+            episode_length (int): number of time steps to simulate before the system is reset during RL training if
+                continuous_control=False
+            dt (timedelta): control time interval
+            continuous_control (bool): whether to use an infinite control horizon
+            history (ModelHistory): logger
+            solver (OptSolver): solver for optimization problem
+            save_path (str): local path to folder in which the trained policy will be stored (as .zip file)
+                after the training is finished
+            seed (int): seed for the global random number generator of numpy (we use np.random.seed(seed) instead
+            of instantiating our own generator)
+            normalize_actions (bool): whether or not to normalize the action space
+            limited_date_range (list): limits the system's date range such that we only train over a specific interval
+
+        Returns:
+            SingleAgentTrainer
+
+        """
+
+        super().__init__(
+            sys=sys,
+            global_controller=global_controller,
+            wrapper=wrapper,
+            horizon=horizon,
+            episode_length=episode_length,
+            dt=dt,
+            continuous_control=continuous_control,
+            history=history,
+            solver=solver,
+            save_path=save_path,
+            seed=seed,
+            normalize_actions=normalize_actions,
+            limited_date_range=limited_date_range,
+            scalarisation_fn=scalarisation_fn,
+        )
+        self.alg_config = alg_config
+        self.policy = policy
+        if policy is not None and not isinstance(policy, PCN):
+            raise NotImplementedError("Only the PCN MORL algorithm is supported at the moment.")
+
+        if logger is None:
+            warnings.warn("No logger specified. There will be no logs for this run.")
+        elif not isinstance(logger, WandBLogger):
+            raise NotImplementedError(
+                "Only WandBLogger is supported for MORL training due to restrictions of the morl-baselines library."
+            )
+        else:
+            self.logger = logger
+
+    def _run(self, n_steps: int = 24):
+        """
+        Runs the single-agent RL training algorithm for a given number of time steps and saves the trained policy.
+
+        Returns:
+            None
+
+        """
+        self.prepare_run()
+        total_timesteps = self.alg_config.total_steps
+        ref_point = np.array([-1000.0, -1000.0])  # TODO need informed choice of reference point
+
+        self.policy.train(total_timesteps=total_timesteps, eval_env=self.eval_env, ref_point=ref_point)
+        # store reference to model in controller
+        for ctrl in self.sys.get_controllers(ctrl_types=[RLBaseController]).values():
+            ctrl.save(self.policy, save_path=self.save_path)
+
+        self.finish_run()
+
+    def prepare_run(self):
+        """
+        Prepare the training by initializing the system and its controllers. Assigns a global controller that
+        takes over control of all entities which require inputs and have not been assigned a controller by the system's
+        set-up. Sets an initial policy if no pre-trained policy was handed over at instantiation.
+
+        Returns:
+            None
+
+        """
+        super().prepare_run()
+        TrainAlg = self.alg_config.algorithm
+        if not self.policy:
+            if self.logger is not None:
+                log = True
+                wandb_kwargs = {
+                    'project_name': self.logger.project_name,
+                    'wandb_entity': self.logger.entity_name,
+                    'experiment_name': self.logger.run_name,
+                }
+            else:
+                log = False
+                wandb_kwargs = {}
+
+            algo_kwargs = self.alg_config.algorithm_config.model_dump()
+            del algo_kwargs['n_steps']  # n_steps is not a valid argument for morl-baselines
+
+            self.policy = TrainAlg(
+                env=self.env,
+                seed=self.seed,
+                log=log,
+                **wandb_kwargs,
+                **algo_kwargs,  # convert pydantic Model to dictionary
+            )
+
+        self.eval_env = self.sys.create_env_func(
+            episode_length=self.episode_length,
+            wrapper=self.wrapper,
+            fixed_start=self.fixed_start,
+            normalize_actions=self.normalize_actions,
+            scalarisation_fn=self.scalarisation_fn,
+        )
+
+    def finish_run(self):
+        super().finish_run()
 
 
 class DeploymentRunner(BaseRunner):
